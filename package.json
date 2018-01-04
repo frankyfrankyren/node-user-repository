@@ -1,0 +1,30 @@
+{
+  "name": "node-user-repository",
+  "version": "0.0.1",
+  "private": true,
+  "scripts": {
+    "start": "node ./bin/www",
+    "test": "./node_modules/mocha/bin/mocha test/*.js --reporter spec --exit"
+  },
+  "dependencies": {
+    "body-parser": "~1.18.2",
+    "cookie-parser": "~1.4.3",
+    "debug": "~2.6.9",
+    "express": "~4.15.5",
+    "express-validation": "^1.0.2",
+    "jade": "~1.11.0",
+    "joi": "^13.0.2",
+    "lodash": "^4.17.4",
+    "morgan": "~1.9.0",
+    "nedb": "^1.8.0"
+  },
+  "devDependencies": {
+    "chai": "^4.1.2",
+    "chai-date-string": "^0.1.0",
+    "chai-datetime": "^1.5.0",
+    "chai-exclude": "^1.0.3",
+    "chai-http": "^3.0.0",
+    "chai-subset": "^1.6.0",
+    "mocha": "^4.1.0"
+  }
+}
