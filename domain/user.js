@@ -2,6 +2,8 @@ var schemas = require('./schemas.js');
 var _ = require('lodash');
 
 var User = function (data) {
+  if (!(this instanceof User)) return new User(data);
+
   this.data = this.sanitize(data);
 };
 

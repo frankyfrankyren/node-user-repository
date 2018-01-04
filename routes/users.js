@@ -1,10 +1,8 @@
 var express = require('express');
 var router = express.Router();
 
-var User = require('../domain/user');
-
-/* GET users listing. */
 var UserListController = function createUserListController(userRepository) {
+  /* gets user details for all users */
   router.get('/', function (req, res, next) {
     userRepository.getUsers(function (err, domainUsers) {
       if (err) {

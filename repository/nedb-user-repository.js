@@ -2,6 +2,8 @@ var nedb = require('nedb');
 var User = require('../domain/user');
 
 var NedbUserRepository = function createNedbUserRepository() {
+  if (!(this instanceof NedbUserRepository)) return new NedbUserRepository();
+
   // Improvement: will create domain errors for Controllers to handle
   function transformToDomainError(nedbError) {
     return nedbError;
