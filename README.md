@@ -49,6 +49,6 @@ npm test
 Absolutely loads, e.g:
 * Cover more edge cases in test
 * More descriptive response returned by server on failures
-* Use ES2016 with babel for a better OO design to further abstract away from implementation details of repositories, enforcing contracts between user-repository and the controller, which is for them to communicate using domain user objects, created by controller and consumed by repository.
+* Use ES2016 with babel for a better OO design.
 * (potentially) create a user interface interacting with the server, currently ```http://localhost:8080/users``` and ```http://localhost:8080:/user/<id>``` requests can be made via browser, others will have to be made via POSTMAN.
 
