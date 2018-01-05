@@ -6,7 +6,7 @@ var UserListController = function createUserListController(userRepository) {
   router.get('/', function (req, res, next) {
     userRepository.getUsers(function (err, domainUsers) {
       if (err) {
-        console.log(err);
+        console.error(err.message);
         res.sendStatus(500);
         return
       }

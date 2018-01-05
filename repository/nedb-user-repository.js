@@ -1,100 +1,142 @@
-var nedb = require('nedb');
+var UserRepository = require('./user-repository');
+var Nedb = require('nedb');
 var User = require('../domain/user');
+var DomainError = require('../error/domain-error');
+var InvalidModelError = require('../error/invalid-model-error');
+var IdAlreadyExistError = require('../error/id-already-exist-error');
+var IdNotFoundError = require('../error/id-not-found-error');
+
+var transformToDomainUsers = function transformToDomainUsers(dbModels) {
+  if (!dbModels) {
+    return null;
+  }
+
+  return dbModels.map(transformToDomainUser);
+};
+
+var transformToDomainUser = function transformToDomainUser(dbModel) {
+  if (!dbModel) {
+    return null;
+  }
+
+  var user = new User(dbModel);
+  user.set("id", dbModel._id);
+  return user;
+};
+
+var transformToDbModel = function transformToDbModel(domainUser) {
+  if (!(domainUser instanceof User)) {
+    throw new InvalidModelError(domainUser);
+  }
+
+  var data = Object.assign({}, domainUser.data);
+  data.created = new Date();
+  data._id = data.id;
+  delete data.id;
+  return data;
+};
 
 var NedbUserRepository = function createNedbUserRepository() {
   if (!(this instanceof NedbUserRepository)) return new NedbUserRepository();
 
-  // Improvement: will create domain errors for Controllers to handle
-  function transformToDomainError(nedbError) {
-    return nedbError;
-  }
+  this.database = new Nedb();
+};
 
-  function transformToDomainUsers(dbModels) {
-    if (!dbModels) {
-      return null;
+NedbUserRepository.prototype = new UserRepository();
+NedbUserRepository.prototype.constructor = NedbUserRepository;
+
+NedbUserRepository.prototype.getUserById = function getUserById(id, handleResponse) {
+  this.database.findOne({_id: id}, function (err, doc) {
+    if (err) {
+      console.error(err);
+      handleResponse(new DomainError(err.message), doc);
+      return;
     }
 
-    return dbModels.map(transformToDomainUser);
-  }
-
-  function transformToDomainUser(dbModel) {
-    if (!dbModel) {
-      return null;
+    if (!doc) {
+      handleResponse(new IdNotFoundError(id), doc);
+      return;
     }
 
-    var user = new User(dbModel);
-    user.set("id", dbModel._id);
-    return user;
+    handleResponse(err, transformToDomainUser(doc));
+  })
+};
+
+NedbUserRepository.prototype.createUser = function createUser(domainUser, handleResponse) {
+
+  var dbModel;
+
+  try {
+    dbModel = transformToDbModel(domainUser);
+  } catch (invalidModelErr) {
+    handleResponse(invalidModelErr, null);
+    return;
   }
 
-  function transformToDbModel(domainUser) {
-    var data = Object.assign({}, domainUser.data);
-    data.created = new Date();
-    data._id = data.id;
-    delete data.id;
-    return data;
-  }
+  this.database.insert(dbModel, function (err, newDoc) {
+    if (err) {
+      console.error(err);
 
-  this.database = new nedb();
-
-  this.createUser = function createUser(domainUser, handleResponse) {
-
-    var dbModel = transformToDbModel(domainUser);
-
-    this.database.insert(dbModel, function (err, newDoc) {
-      if (err) {
-        console.log(err)
+      if (err.errorType === 'uniqueViolated') {
+        handleResponse(new IdAlreadyExistError(domainUser.id), null);
+      } else {
+        handleResponse(new DomainError(err.message));
       }
 
-      handleResponse(transformToDomainError(err), transformToDomainUser(newDoc))
-    })
-  };
+      return;
+    }
 
-  this.getUserById = function getUserById(id, handleResponse) {
+    handleResponse(err, transformToDomainUser(newDoc));
+  })
+};
 
-    this.database.findOne({_id: id}, function (err, doc) {
-      if (err) {
-        console.log(err)
-      }
+NedbUserRepository.prototype.getUsers = function getUsers(handleResponse) {
 
-      handleResponse(transformToDomainError(err), transformToDomainUser(doc))
-    })
-  };
+  this.database.find({}, function (err, docs) {
+    if (err) {
+      console.log(err);
+      handleResponse(new DomainError(err.message), docs);
+      return;
+    }
 
-  this.getUsers = function getUsers(responseCallback) {
+    handleResponse(err, transformToDomainUsers(docs));
+  })
+};
 
-    this.database.find({}, function (err, docs) {
-      if (err) {
-        console.log(err)
-      }
+NedbUserRepository.prototype.updateUser = function updateUser(id, updates, handleResponse) {
 
-      responseCallback(transformToDomainError(err), transformToDomainUsers(docs))
-    })
-  };
+  this.database.update({_id: id}, {$set: updates}, {}, function (err, numReplaced) {
+    if (err) {
+      console.log(err);
+      handleResponse(new DomainError(err.message), numReplaced === 1);
+      return;
+    }
 
-  this.updateUser = function updateUser(id, updates, responseCallback) {
+    if (numReplaced === 0) {
+      handleResponse(new IdNotFoundError(id), numReplaced === 1);
+      return;
+    }
 
-    this.database.update({_id: id}, {$set: updates}, {}, function (err, numReplaced) {
-      if (err) {
-        console.log(err)
-      }
+    handleResponse(err, numReplaced === 1);
+  })
+};
 
-      responseCallback(transformToDomainError(err), numReplaced)
-    })
-  };
+NedbUserRepository.prototype.removeUser = function removeUser(id, handleResponse) {
 
-  this.removeUser = function removeUser(id, responseCallback) {
+  this.database.remove({_id: id}, {}, function (err, numRemoved) {
+    if (err) {
+      console.log(err);
+      handleResponse(new DomainError(err.message), numRemoved === 1);
+      return;
+    }
 
-    this.database.remove({_id: id}, {}, function (err, numRemoved) {
-      if (err) {
-        console.log(err)
-      }
+    if (numRemoved === 0) {
+      handleResponse(new IdNotFoundError(id), numRemoved === 1);
+      return;
+    }
 
-      responseCallback(transformToDomainError(err), numRemoved)
-    })
-  };
-
-  return this;
+    handleResponse(err, numRemoved === 1)
+  })
 };
 
 module.exports = NedbUserRepository;
